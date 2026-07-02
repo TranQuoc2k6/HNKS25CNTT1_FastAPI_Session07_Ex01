@@ -1,90 +1,41 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, HTTPException, status
+from pydantic import BaseModel
 
 app = FastAPI()
 
-courses = [
-    {"id": 1, "code": "PY101", "name": "Python Basic", "duration": 30, "fee": 3000000},
-    {"id": 2, "code": "API101", "name": "FastAPI Basic", "duration": 24, "fee": 2500000},
-    {"id": 3, "code": "JV101", "name": "Java Basic", "duration": 40, "fee": 4000000}
+# Dữ liệu nội bộ trong bộ nhớ tạm - Chứa các trường nhạy cảm
+orders_db = [
+    {
+        "id": 1,
+        "customer_name": "Nguyen Van A",
+        "total_amount": 1500000.0,
+        "profit_margin": 0.25,      # Nhạy cảm - Cấm lộ!
+        "supplier_id": "SUP_DELL_01" # Nhạy cảm - Cấm lộ!
+    },
+    {
+        "id": 2,
+        "customer_name": "Tran Thi B",
+        "total_amount": 350000.0,
+        "profit_margin": 0.30,       # Nhạy cảm - Cấm lộ!
+        "supplier_id": "SUP_LOGI_02"  # Nhạy cảm - Cấm lộ!
+    }
 ]
 
-# Lấy danh sách khóa học
-@app.get("/courses", tags= ["Courses"])
-async def get_all_courses():
-    return {
-        "massage": "Lấy danh sách khóa học thành công",
-        "data": courses
-    }
+class OrderInternal(BaseModel):
+    id: int
+    customer_name: str
+    total_amount: float
 
-# Lấy danh sách khóa học chi tiết
-@app.get("/course/{course_id}", tags=["Courses"])
-async def get_course_infor(course_id: int):
-    for course in courses:
-        if course_id == course["id"]:
-            return {
-                "message": f"Lấy danh sách khóa học {course_id} thành công",
-                "data": course
-            }
-    raise HTTPException(status_code= 404, detail= "Course not found.")
-
-# Thêm khóa học
-
-class courseCreate(BaseModel):
-    code: str 
-    name: str = Field(..., min_length=2)
-    duration: int = Field(ge= 0)
-    fee: float = Field(gl = 0)
-
-@app.post("/course", tags=["Courses"])
-async def create_course(new_course: courseCreate):
-
-    list_course = {
-        "id": len(courses) + 1,
-        "code": new_course.code,
-        "name": new_course.name,
-        "duration": new_course.duration,
-        "fee": new_course.fee
-    }
-
-    for course in courses:
-        if course["code"] == new_course.code:
-            raise HTTPException(
-                status_code= 409,
-                detail= "Code khóa học đã tồn tại"
-            )
-
-    courses.append(list_course)
-    return {
-        "message": "Thêm khóa học thành công",
-        "data": list_course
-    }
-
-# Cập nhật khóa học
-@app.put("/course/{course_id}", tags= ["Courses"])
-async def update_course(course_id: int, update_course: courseCreate):
-    for course in courses:
-        if course["id"] == course_id:
-            course.update(update_course)
-            return {
-                "message": "Cập nhật khóa học thành công",
-                "data": course
-            }
-    raise HTTPException (
-        status_code= 404,
-        detail= "Course not found"
+@app.get(
+        "/orders/{order_id}", 
+        response_model=OrderInternal,
+        status_code=status.HTTP_200_OK
     )
-
-# Xóa khóa học
-@app.delete("/couse/{course_id}", tags= ["Courses"])
-async def delete_course(course_id: int):
-    for course in courses:
-        if course["id"] == course_id:
-            courses.remove(course)
-            return {
-                "message": "Xóa thành công",
-            }
+def get_order_detail(order_id: int):
+    for order in orders_db:
+        if order["id"] == order_id:
+            return order 
     raise HTTPException(
-        status_code= 404,
-        detail= "Course not found"
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Order not found"
     )
